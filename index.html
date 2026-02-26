@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深夜幸運餅乾 ｜ 視覺強化版</title>
+    <style>
+        :root {
+            --bg-color: #0f0c29;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent-color: #ffd700;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 350px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+
+        .cookie-box {
+            font-size: 70px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(.17,.67,.83,.67);
+            display: inline-block;
+        }
+        .cookie-box:hover { transform: scale(1.1); }
+        .cookie-box.active { animation: break 0.5s forwards; }
+
+        @keyframes break {
+            50% { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #result { display: none; animation: slideUp 0.5s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fortune-msg { font-size: 1.1rem; margin: 15px 0; color: #fff; font-style: italic; }
+
+        /* 標籤樣式 */
+        .tag-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .tag { padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: #000; }
+        
+        /* 這裡的背景顏色會被 JS 動態修改 */
+        #color-display { color: white; text-shadow: 0 0 3px rgba(0,0,0,0.8); transition: background 0.3s; }
+
+        .yiji-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-around;
+        }
+        .yi { color: #50fa7b; } /* 綠色 */
+        .ji { color: #ff5555; } /* 紅色 */
+
+        .btn-copy {
+            margin-top: 20px;
+            background: none;
+            border: 1px solid #555;
+            color: #888;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .btn-copy:hover { border-color: var(--accent-color); color: var(--accent-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="margin:0; color:var(--accent-color);">✨ 深夜靈感餅乾</h2>
+    <div class="cookie-box" id="cookie" onclick="openCookie()">🥠</div>
+
+    <div id="result">
+        <div class="tag-row">
+            <span id="rank-tag" class="tag" style="background:#ff4757;"></span>
+            <span id="num-tag" class="tag" style="background:#1e90ff; color:white;"></span>
+        </div>
+
+        <p class="fortune-msg" id="msg"></p>
+
+        <div class="tag-row">
+            <span id="color-display" class="tag"></span>
+        </div>
+
+        <div class="yiji-box">
+            <div><span class="yi">宜：</span><span id="yi-text"></span></div>
+            <div><span class="ji">忌：</span><span id="ji-text"></span></div>
+        </div>
+
+        <button class="btn-copy" onclick="copyToClipboard()">📋 複製這份幸運</button>
+    </div>
+</div>
+
+<script>
+    const data = {
+        fortunes: [
+            { t: "「有些事情現在不做，以後想起來會慶幸當初沒做。」", r: "大吉" },
+            { t: "「你的才華就像懷孕，時間久了別人才看得出來。」", r: "中吉" },
+            { t: "「錢不是問題，問題是沒錢。」", r: "末吉" },
+            { t: "「今天你會遇到一個貴人，雖然那個貴人可能就是你自己。」", r: "大吉" },
+            { t: "「如果生活絆倒了你，乾脆躺下來睡一覺。」", r: "平" }
+        ],
+        colors: [
+            { n: "極致黑", c: "#000000" },
+            { n: "蒂芬妮藍", c: "#81D8D0" },
+            { n: "亮麗黃", c: "#F5DF4D" },
+            { n: "烈焰紅", c: "#E03C31" },
+            { n: "薰衣草紫", c: "#E6E6FA" }
+        ],
+        yi: ["準時下班", "買杯手搖", "整理桌面", "稱讚同事", "勇敢告白"],
+        ji: ["無效社交", "衝動購物", "熬夜追劇", "對發票", "跟老闆對到眼"]
+    };
+
+    function openCookie() {
+        const cookie = document.getElementById('cookie');
+        cookie.classList.add('active');
+
+        // 隨機選取
+        const f = data.fortunes[Math.floor(Math.random() * data.fortunes.length)];
+        const c = data.colors[Math.floor(Math.random() * data.colors.length)];
+        const yi = data.yi[Math.floor(Math.random() * data.yi.length)];
+        const ji = data.ji[Math.floor(Math.random() * data.ji.length)];
+        const num = Math.floor(Math.random() * 100);
+
+        setTimeout(() => {
+            cookie.innerText = '📄';
+            document.getElementById('result').style.display = 'block';
+            
+            // 填充文字
+            document.getElementById('msg').innerText = f.t;
+            document.getElementById('rank-tag').innerText = f.r;
+            document.getElementById('num-tag').innerText = "幸運數: " + num;
+            
+            // 處理顏色顯示
+            const colorTag = document.getElementById('color-display');
+            colorTag.innerText = `幸運色：${c.n} (${c.c})`;
+            colorTag.style.backgroundColor = c.c; // 直接改變背景顏色
+            
+            // 更新宜忌
+            document.getElementById('yi-text').innerText = yi;
+            document.getElementById('ji-text').innerText = ji;
+        }, 300);
+    }
+
+    function copyToClipboard() {
+        const msg = document.getElementById('msg').innerText;
+        const color = document.getElementById('color-display').innerText;
+        const text = `🥠 我的今日幸運餅乾 🥠\n${msg}\n${color}\n更多驚喜明天見！`;
+        navigator.clipboard.writeText(text);
+        alert('運勢已複製到剪貼簿！');
+    }
+</script>
+
+</body>
+</html>
